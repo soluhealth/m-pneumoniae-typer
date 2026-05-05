@@ -1,0 +1,53 @@
+reference_strain: M129
+reference_accession: NC_000912.1
+expected_m129_profile: 4-5-7-2
+loci:
+- name: Mpn13
+  motif_length: 16
+  tr_identity_pct: 83
+  f_primer: GACCAGCATTAGATTGCTATG
+  r_primer: AACAAATTAAGCAGCTCACG
+  constant: 351
+  m129_copies: 4
+  _meta:
+    m129_amplicon_length_bp: 415
+    m129_amplicon_start_1based: 596460
+    m129_amplicon_end_1based: 596874
+    m129_array_length_bp: 64
+- name: Mpn14
+  motif_length: 21
+  tr_identity_pct: 84
+  f_primer: CTCAGGGCGAAACCTTAAAG
+  r_primer: GCAATGGCTTTCAGCACAAC
+  constant: 294
+  m129_copies: 5
+  _meta:
+    m129_amplicon_length_bp: 399
+    m129_amplicon_start_1based: 608594
+    m129_amplicon_end_1based: 608992
+    m129_array_length_bp: 105
+- name: Mpn15
+  motif_length: 21
+  tr_identity_pct: 81
+  f_primer: CAACAGCACCACATCTTTAG
+  r_primer: GCTAATCTTGCAAACGCTGC
+  constant: 94
+  m129_copies: 7
+  _meta:
+    m129_amplicon_length_bp: 241
+    m129_amplicon_start_1based: 645491
+    m129_amplicon_end_1based: 645731
+    m129_array_length_bp: 147
+- name: Mpn16
+  motif_length: 47
+  tr_identity_pct: 100
+  f_primer: GACGCGTTCGCTAAAAGAG
+  r_primer: CAGGCTCAACCAAATAATGG
+  constant: 259
+  m129_copies: 2
+  _meta:
+    m129_amplicon_length_bp: 353
+    m129_amplicon_start_1based: 736003
+    m129_amplicon_end_1based: 736355
+    m129_array_length_bp: 94
+primer_max_mismatches: 2
