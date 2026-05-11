@@ -1,8 +1,9 @@
-# M. pneumoniae MLVA typer (scratch)
+# M. pneumoniae typer (scratch)
 
-In silico MLVA typer for *Mycoplasma pneumoniae* implementing the
-amplicon-size method of Dégrange et al. 2009 (4-locus Mpn13/14/15/16
-scheme).
+In silico typers for *Mycoplasma pneumoniae*:
+
+- **MLVA** — Dégrange et al. 2009, 4-locus Mpn13/14/15/16 amplicon-size scheme.
+- **P1** — Kenri et al. 2008 multiplex amplicon-size genotyping, P1-1 vs P1-2.
 
 ## Layout
 
@@ -10,11 +11,20 @@ scheme).
 .
 ├── README.md
 ├── requirements.txt
-├── M129_NC_000912.1.fna       # vendored M. pneumoniae M129 reference
-├── loci.yaml                  # built from M129
-├── build_loci_from_m129.py    # one-time: calibrate constants from M129
-└── mlva_type.py               # the typer (assembly → profile)
+├── M129_NC_000912.1.fna       # vendored M. pneumoniae M129 reference (P1-1)
+├── FH_NC_017504.1.fna         # vendored M. pneumoniae FH reference   (P1-2)
+├── loci.yaml                  # MLVA loci, built from M129
+├── build_loci_from_m129.py    # MLVA: one-time calibration from M129
+├── mlva_type.py               # MLVA typer (assembly → profile)
+├── p1_loci.yaml               # P1 loci, built from M129 + FH
+├── build_p1_loci.py           # P1: one-time calibration from M129 + FH
+└── p1_type.py                 # P1 typer (assembly → subtype)
 ```
+
+The two `*_loci.yaml` files are **build artifacts** — primers and locus
+specs are authored in the corresponding `build_*.py` script (the source
+of truth) and the YAML is regenerated each time the build runs. Don't
+hand-edit the YAML; edit the script and rebuild.
 
 ## Setup
 
@@ -27,11 +37,19 @@ python -m venv .venv
 
 ## Running
 
+MLVA:
+
 ```sh
 .venv/bin/python mlva_type.py --assembly path/to/contigs.fasta --out profile.json
 ```
 
-## How it works
+P1:
+
+```sh
+.venv/bin/python p1_type.py --assembly path/to/contigs.fasta --out p1_call.json
+```
+
+## MLVA typing
 
 Dégrange et al. 2009 (the original MLVA paper) types isolates by
 multiplex PCR and capillary fragment sizing. The crucial sentence in
@@ -71,7 +89,7 @@ in particular has 4 such hits in M129 before the real one, and a naive
 "first hit wins" implementation pairs a false F with a false R-RC,
 returning the wrong amplicon.
 
-## M129 self-validation
+### M129 self-validation
 
 ```
 profile: 4-5-7-2 (Dégrange 2009 type P)
@@ -84,7 +102,7 @@ profile: 4-5-7-2 (Dégrange 2009 type P)
 Pass `--strict` to `build_loci_from_m129.py` to make the build fail if
 this calibration ever regresses.
 
-## Why this replaces the per-copy approach
+### Why this replaces the per-copy MLVA approach
 
 An earlier version of this typer ran pytrf (`GTRFinder`/`ATRFinder`) on
 each amplicon, plus a custom canonical-motif sliding finder, and counted
@@ -103,6 +121,60 @@ The amplicon-size method also handles the heavily degenerate Mpn15 array
 correctly: regardless of how many "copies" pass an identity threshold,
 the 241 bp amplicon corresponds to 7 motif units of 21 bp.
 
+## P1 typing
+
+Implements Kenri et al. 2008 (*J Med Microbiol* 57:469-475), which types
+isolates by multiplex amplicon-size PCR at two regions of the P1 adhesin
+gene (MPN141): **RepMP4** (typing reverses N1 / 2N2C) and **RepMP2/3**
+(typing reverses R3-1 / R3-2). Expected amplicon sizes from the paper:
+
+| locus    | P1-1 | P1-2 |
+|----------|------|------|
+| RepMP4   | 343  | 560  |
+| RepMP2/3 | 394  | 617  |
+
+The overall call combines both loci's calls. Kenri's R3-2V "variant 2a"
+sub-classification is intentionally not implemented — we report only
+the P1-1 / P1-2 dichotomy.
+
+### Why we anchor on outer primers
+
+The *M. pneumoniae* genome carries multiple **RepMP4 / RepMP2-3 paralogs**
+(3 ADH4F binding sites and 12 MP2/3-F3 binding sites in M129) — most of
+those paralogs contain mixed-subtype sequences and amplify with both the
+P1-1 and P1-2 reverse primers, which would defeat naïve primer search. In
+vitro, Kenri et al. handle this with a nested PCR: a first round of
+gene-specific primers isolates the actual P1 gene before the typing
+multiplex runs.
+
+In silico we get the same specificity by **anchoring on a uniquely-binding
+outer primer**:
+
+- **ADH2R** for RepMP4 (1 genome-wide hit in both M129 and FH)
+- **ADH3** for RepMP2/3 (1 genome-wide hit in both M129 and FH)
+
+Each locus's typing primers are only searched within ±5 kb of the anchor.
+Amplicons are accepted only when their size matches the paper-published
+size within ±5 bp.
+
+### Confidence
+
+`high` requires `mismatches ≤ 1` and `size_dev_bp ≤ 2` (matches MLVA's
+±2 bp size tolerance, plus allows a single primer-region SNP). Anything
+looser falls to `low`. A locus that finds no amplicon at all is `missing`.
+The overall call is `high` only if every locus called and every locus is
+high.
+
+### M129 + FH self-validation
+
+```
+M129 → P1-1   RepMP4: 343 bp (mm=0, high)   RepMP2/3: 394 bp (mm=0, high)
+FH   → P1-2   RepMP4: 560 bp (mm=0, high)   RepMP2/3: 617 bp (mm=0, high)
+```
+
+Pass `--strict` to `build_p1_loci.py` to fail the build if either
+calibration regresses.
+
 ## Known limitations
 
 - **Hamming-only primer matching** (no indels). Adequate for most
@@ -111,7 +183,12 @@ the 241 bp amplicon corresponds to 7 motif units of 21 bp.
 - **Assembly-based** — short-read assemblies can collapse longer VNTRs,
   giving an undersized amplicon and an undercount. Long-read or hybrid
   assemblies are more reliable.
-- **5-locus scheme not implemented.** Dégrange's original includes Mpn1
-  (12 bp motif, hsdS gene), which Chalker et al. 2011 dropped due to
+- **Cross-contig amplicons not supported** (both typers). If the assembly
+  breaks within the P1 gene or a VNTR locus such that the F primer and R
+  primer end up on different contigs, the amplicon can't be reconstructed
+  and the call returns `unknown` / `missing`. Long-read or hybrid
+  assemblies avoid this.
+- **MLVA 5-locus scheme not implemented.** Dégrange's original includes
+  Mpn1 (12 bp motif, hsdS gene), which Chalker et al. 2011 dropped due to
   instability across passages. Easy to add if needed — same primer-pair
   pattern.

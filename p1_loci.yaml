@@ -1,0 +1,107 @@
+scheme: Kenri et al. 2008 (J Med Microbiol 57:469-475) multiplex amplicon-size, anchored on outer primer
+references:
+  P1-1: M129 (NC_000912.1)
+  P1-2: FH (NC_017504.1)
+primer_max_mismatches: 2
+max_amplicon_bp: 1500
+anchor_radius_bp: 5000
+size_tolerance_bp: 5
+loci:
+- name: RepMP4
+  anchor:
+    primer_name: ADH2R
+    primer: GAACTTAGCGCCAGCAACTGCCAT
+  f_primer:
+    primer_name: ADH4F
+    primer: GACCGCATCAACCACCTTTGCGTTACG
+  subtype_reverses:
+    P1-1:
+      primer_name: N1
+      primer: CCCGGTGGTGGAAGTATTTT
+      expected_bp: 343
+    P1-2:
+      primer_name: 2N2C
+      primer: TGCCTTGGTCACCGGAGTTG
+      expected_bp: 560
+  _meta:
+    M129:
+      call: P1-1
+      evidence:
+        chosen_subtype: P1-1
+        subtype_amplicon:
+          amp_bp: 343
+          mm: 0
+          size_dev_bp: 0
+          win_strand: +
+          f_pos_in_window: 3640
+          primer_name: N1
+        anchor:
+          contig: NC_000912.1
+          strand: '-'
+          anchor_pos_in_strand: 633794
+          anchor_mm: 0
+    FH:
+      call: P1-2
+      evidence:
+        chosen_subtype: P1-2
+        subtype_amplicon:
+          amp_bp: 560
+          mm: 0
+          size_dev_bp: 0
+          win_strand: +
+          f_pos_in_window: 3625
+          primer_name: 2N2C
+        anchor:
+          contig: NC_017504.1
+          strand: '-'
+          anchor_pos_in_strand: 630038
+          anchor_mm: 0
+- name: RepMP2_3
+  anchor:
+    primer_name: ADH3
+    primer: CGAGTTTGCTGCTAACGAGT
+  f_primer:
+    primer_name: MP2/3-F3
+    primer: TCGACCAAGCCAACCTCCAG
+  subtype_reverses:
+    P1-1:
+      primer_name: R3-1
+      primer: TTGGAATCGGACCCACTTCG
+      expected_bp: 394
+    P1-2:
+      primer_name: R3-2
+      primer: CGACGTTGTGTTTGTGCCAC
+      expected_bp: 617
+  _meta:
+    M129:
+      call: P1-1
+      evidence:
+        chosen_subtype: P1-1
+        subtype_amplicon:
+          amp_bp: 394
+          mm: 0
+          size_dev_bp: 0
+          win_strand: +
+          f_pos_in_window: 5386
+          primer_name: R3-1
+        anchor:
+          contig: NC_000912.1
+          strand: +
+          anchor_pos_in_strand: 183124
+          anchor_mm: 0
+    FH:
+      call: P1-2
+      evidence:
+        chosen_subtype: P1-2
+        subtype_amplicon:
+          amp_bp: 617
+          mm: 0
+          size_dev_bp: 0
+          win_strand: +
+          f_pos_in_window: 5386
+          primer_name: R3-2
+        anchor:
+          contig: NC_017504.1
+          strand: +
+          anchor_pos_in_strand: 181571
+          anchor_mm: 0
