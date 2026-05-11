@@ -116,12 +116,28 @@ def type_locus_from_assembly(
     max_amplicon_bp: int = MAX_AMPLICON_BP,
     size_tolerance: int = SIZE_TOLERANCE_BP,
 ):
-    """Top-level locus typing logic, used by both build and type scripts.
-    Returns a dict with the call, confidence, the chosen amplicon evidence,
-    and a list of all anchor hits considered."""
+    """Type a single P1 locus from an assembly.
+
+    Flow:
+      1. Find every anchor-primer hit on both strands of every contig.
+      2. Require a uniquely-best anchor (lowest mm, no ties). Tied best →
+         no-call: silently picking one risks typing off a paralog.
+      3. Build a ±anchor_radius window on the + strand around the anchor's
+         binding site, then scan it in both orientations so the F+R pair
+         is found regardless of gene direction.
+      4. For each subtype reverse, keep the best-mm amplicon whose size is
+         within size_tolerance of the paper-published expected_bp.
+      5. Resolve: exactly one subtype matches → call; zero or both → no-call
+         with the conflict surfaced in 'note'.
+
+    Returns dict: call, confidence (high/low/missing), note, evidence
+    (chosen amplicon + anchor), and anchor_hits (all considered)."""
+    # find_amplicons_in_window scans up to max_amplicon_bp past the F primer;
+    # if the window is shorter we'd silently truncate genuine amplicons.
     assert max_amplicon_bp <= anchor_radius * 2, \
         f"max_amplicon_bp ({max_amplicon_bp}) must fit within window 2*anchor_radius ({anchor_radius * 2})"
 
+    # --- Step 1: locate the anchor primer ---
     anchor_hits = find_anchor_hits(contigs, locus["anchor"]["primer"], max_mm)
     if not anchor_hits:
         return {"call": None, "confidence": "missing",
@@ -130,6 +146,8 @@ def type_locus_from_assembly(
     anchor_hits.sort(key=lambda h: h[3])
     best_mm = anchor_hits[0][3]
     n_best = sum(1 for h in anchor_hits if h[3] == best_mm)
+    # Step 2: a merely non-unique anchor (one uniquely best plus weaker
+    # also-rans) is fine and just gets a note. Tied best → refuse.
     if n_best > 1:
         return {"call": None, "confidence": "low",
                 "note": (f"anchor {locus['anchor']['primer_name']} ambiguous: "
@@ -140,8 +158,11 @@ def type_locus_from_assembly(
         note = (f"anchor {locus['anchor']['primer_name']} non-unique "
                 f"({len(anchor_hits)} hits); used uniquely-best hit at mm={best_mm}")
 
+    # --- Step 3: build the search window ---
     cid, strand, anchor_pos, anchor_mm = anchor_hits[0]
     contig_seq = contigs[cid]
+    # Map anchor_pos back to + strand coords: a hit at position p on rc(seq)
+    # of length L corresponds to the anchor's binding site [L-p-k, L-p] on +.
     if strand == "+":
         center_fwd = anchor_pos
     else:
@@ -149,8 +170,12 @@ def type_locus_from_assembly(
     win_start = max(0, center_fwd - anchor_radius)
     win_end = min(len(contig_seq), center_fwd + len(locus["anchor"]["primer"]) + anchor_radius)
     window_fwd = contig_seq[win_start:win_end]
+    # PCR doesn't care which strand the primers bind, so the genuine amplicon
+    # may sit on either orientation of the window. Scan both. (A real amplicon
+    # appears in only one — these primers aren't palindromic.)
     windows = (("+", window_fwd), ("-", rc(window_fwd)))
 
+    # --- Step 4: find best amplicon per subtype reverse ---
     fwd = locus["f_primer"]["primer"]
     matches = {}
     for name, sp in locus["subtype_reverses"].items():
